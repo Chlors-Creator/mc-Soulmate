@@ -19,7 +19,7 @@ final class FarmStorage {
     private FarmStorage() {
     }
 
-    static Optional<BlockPos> findNearbyChest(SoulmateEntity soulmate) {
+    static Optional<BlockPos> findNearbyChest(SoulmateEntity soulmate, FarmInventory inventory) {
         if (!(soulmate.level() instanceof ServerLevel level)) {
             return Optional.empty();
         }
@@ -31,11 +31,11 @@ final class FarmStorage {
                 .map(BlockPos::immutable)
                 .filter(position -> isWithinRange(soulmate, position))
                 .filter(level::hasChunkAt)
-                .filter(position -> hasSpaceInChest(level, position, soulmate.getFarmingInventory()))
+                .filter(position -> hasSpaceInChest(level, position, inventory))
                 .min(Comparator.comparingDouble(position -> distanceSquared(soulmate, position)));
     }
 
-    static void depositInventory(SoulmateEntity soulmate, BlockPos chestPosition) {
+    static void depositInventory(SoulmateEntity soulmate, BlockPos chestPosition, FarmInventory inventory) {
         if (!(soulmate.level() instanceof ServerLevel level)) {
             return;
         }
@@ -45,7 +45,7 @@ final class FarmStorage {
             return;
         }
 
-        boolean changed = moveInventoryItems(soulmate.getFarmingInventory(), chest);
+        boolean changed = moveInventoryItems(inventory, chest);
         if (changed) {
             chest.setChanged();
         }

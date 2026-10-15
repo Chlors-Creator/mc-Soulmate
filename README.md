@@ -44,4 +44,4 @@ If a regular or trapped chest with room is within 20 blocks, the Soulmate walks 
 
 ## Fishing
 
-Equip a fishing rod in the main hand. While safe and near fishable water, the Soulmate walks to the shore, faces the water, casts, waits for a bite, and reels in using vanilla fishing behavior. The fishing pose shows the held rod, bobber, and line. Caught items are added to the same saved inventory as farm produce and seeds, so nearby chests can receive and stack them automatically.
+Equip a fishing rod in the main hand. While safe and near fishable water, the Soulmate walks to the shore, faces the water, casts, waits for a bite, and reels in using vanilla fishing behavior. The fishing pose shows the held rod, bobber, and line. Fishing loot is saved separately from farm produce and seeds. After it has collected 10 fish items, it pauses fishing and deposits its fishing inventory into a nearby chest within 20 blocks, stacking matching items first; fishing resumes when fewer than 10 fish remain in its inventory.

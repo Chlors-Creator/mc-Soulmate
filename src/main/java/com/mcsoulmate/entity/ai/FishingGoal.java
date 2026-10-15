@@ -99,7 +99,9 @@ public final class FishingGoal extends Goal {
     }
 
     private static boolean canFish(SoulmateEntity soulmate) {
-        return soulmate.isSafeForFarming() && soulmate.getMainHandItem().getItem() instanceof FishingRodItem;
+        return soulmate.isSafeForFarming()
+                && !soulmate.hasFishingStorageBatchReady()
+                && soulmate.getMainHandItem().getItem() instanceof FishingRodItem;
     }
 
     private void manageFishingRod(ServerLevel level) {
@@ -159,7 +161,7 @@ public final class FishingGoal extends Goal {
             if (previousItems.contains(item.getUUID())) {
                 continue;
             }
-            this.soulmate.getFarmingInventory().addItem(item.getItem());
+            this.soulmate.getFishingInventory().addItem(item.getItem());
             item.discard();
         }
     }

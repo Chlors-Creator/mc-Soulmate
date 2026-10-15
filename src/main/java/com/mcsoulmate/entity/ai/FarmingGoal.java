@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import com.mcsoulmate.entity.FarmInventory;
 import com.mcsoulmate.entity.SoulmateEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -77,6 +78,10 @@ public final class FarmingGoal extends Goal {
     }
 
     private boolean selectWork(ServerLevel level) {
+        if (this.selectFishingStorage()) {
+            return true;
+        }
+
         Optional<BlockPos> ripeCrop = this.findNearestRipeCrop(level);
         if (ripeCrop.isPresent()) {
             return this.assignWork(WorkType.HARVEST, ripeCrop.get());
@@ -87,11 +92,26 @@ public final class FarmingGoal extends Goal {
             return this.assignWork(WorkType.PLANT, emptyFarmland.get());
         }
 
-        if (!this.soulmate.getFarmingInventory().isEmpty()) {
-            Optional<BlockPos> chest = FarmStorage.findNearbyChest(this.soulmate);
-            return chest.isPresent() && this.assignWork(WorkType.DEPOSIT, chest.get());
+        return this.selectFarmingStorage();
+    }
+
+    private boolean selectFishingStorage() {
+        if (!this.soulmate.hasFishingStorageBatchReady()) {
+            return false;
         }
-        return false;
+        return FarmStorage.findNearbyChest(this.soulmate, this.soulmate.getFishingInventory())
+                .map(chest -> this.assignWork(WorkType.DEPOSIT_FISH, chest))
+                .orElse(false);
+    }
+
+    private boolean selectFarmingStorage() {
+        FarmInventory inventory = this.soulmate.getFarmingInventory();
+        if (inventory.isEmpty()) {
+            return false;
+        }
+        return FarmStorage.findNearbyChest(this.soulmate, inventory)
+                .map(chest -> this.assignWork(WorkType.DEPOSIT, chest))
+                .orElse(false);
     }
 
     private boolean assignWork(WorkType type, BlockPos position) {
@@ -174,7 +194,16 @@ public final class FarmingGoal extends Goal {
             return;
         }
         switch (this.workType) {
-            case DEPOSIT -> FarmStorage.depositInventory(this.soulmate, this.workPosition);
+            case DEPOSIT -> FarmStorage.depositInventory(
+                    this.soulmate,
+                    this.workPosition,
+                    this.soulmate.getFarmingInventory()
+            );
+            case DEPOSIT_FISH -> FarmStorage.depositInventory(
+                    this.soulmate,
+                    this.workPosition,
+                    this.soulmate.getFishingInventory()
+            );
             case HARVEST -> FarmActions.harvest(this.soulmate, level, this.workPosition);
             case PLANT -> FarmActions.plant(this.soulmate, level, this.workPosition);
         }
@@ -187,6 +216,7 @@ public final class FarmingGoal extends Goal {
 
     private enum WorkType {
         DEPOSIT,
+        DEPOSIT_FISH,
         HARVEST,
         PLANT
     }

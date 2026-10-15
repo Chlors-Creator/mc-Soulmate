@@ -3,6 +3,8 @@ package com.mcsoulmate.entity;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 public final class FarmInventory {
@@ -14,6 +16,13 @@ public final class FarmInventory {
 
     public int size() {
         return this.items.size();
+    }
+
+    public int countItems(TagKey<Item> tag) {
+        return this.items.stream()
+                .filter(item -> item.is(tag))
+                .mapToInt(ItemStack::getCount)
+                .sum();
     }
 
     public ItemStack getItem(int slot) {
@@ -51,6 +60,17 @@ public final class FarmInventory {
         for (ItemStack item : restoredItems) {
             this.addItem(item);
         }
+    }
+
+    public List<ItemStack> removeItems(TagKey<Item> tag) {
+        List<ItemStack> removedItems = new ArrayList<>();
+        for (int slot = this.items.size() - 1; slot >= 0; slot--) {
+            ItemStack stored = this.items.get(slot);
+            if (stored.is(tag)) {
+                removedItems.add(this.removeItem(slot, stored.getCount()));
+            }
+        }
+        return removedItems;
     }
 
     private void mergeIntoExistingStacks(ItemStack incoming) {

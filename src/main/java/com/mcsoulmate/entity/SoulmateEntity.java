@@ -9,6 +9,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.AgeableMob;
@@ -69,10 +70,12 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     private static final int OWNER_HURT_TARGET_PRIORITY = 2;
     private static final int HURT_BY_TARGET_PRIORITY = 3;
     private static final int NO_FISHING_HOOK = -1;
+    private static final int FISHES_PER_STORAGE_BATCH = 10;
     private static final EntityDataAccessor<Integer> FISHING_HOOK_ID =
             SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.INT);
 
     private final FarmInventory farmingInventory = new FarmInventory();
+    private final FarmInventory fishingInventory = new FarmInventory();
 
     public SoulmateEntity(EntityType<? extends SoulmateEntity> entityType, Level level) {
         super(entityType, level);
@@ -118,6 +121,14 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         return this.farmingInventory;
     }
 
+    public FarmInventory getFishingInventory() {
+        return this.fishingInventory;
+    }
+
+    public boolean hasFishingStorageBatchReady() {
+        return this.fishingInventory.countItems(ItemTags.FISHES) >= FISHES_PER_STORAGE_BATCH;
+    }
+
     public int getFishingHookId() {
         return this.entityData.get(FISHING_HOOK_ID);
     }
@@ -138,6 +149,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     protected void addAdditionalSaveData(ValueOutput output) {
         super.addAdditionalSaveData(output);
         output.store("FarmingInventory", ItemStack.CODEC.listOf(), this.farmingInventory.copyItems());
+        output.store("FishingInventory", ItemStack.CODEC.listOf(), this.fishingInventory.copyItems());
     }
 
     @Override
@@ -146,6 +158,12 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         this.farmingInventory.replaceItems(
                 input.read("FarmingInventory", ItemStack.CODEC.listOf()).orElseGet(java.util.List::of)
         );
+        this.fishingInventory.replaceItems(
+                input.read("FishingInventory", ItemStack.CODEC.listOf()).orElseGet(java.util.List::of)
+        );
+        for (ItemStack fish : this.farmingInventory.removeItems(ItemTags.FISHES)) {
+            this.fishingInventory.addItem(fish);
+        }
     }
 
     @Override
