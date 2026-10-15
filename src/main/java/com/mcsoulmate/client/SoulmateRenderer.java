@@ -12,6 +12,9 @@ import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.projectile.FishingHook;
+import net.minecraft.world.phys.Vec3;
 
 public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, AvatarRenderState, PlayerModel> {
     private static final float SHADOW_RADIUS = 0.5F;
@@ -24,6 +27,7 @@ public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, 
                 ArmorModelSet.bake(ModelLayers.PLAYER_SLIM_ARMOR, context.getModelSet(), HumanoidModel::new);
         this.addLayer(new HumanoidArmorLayer<>(this, armorModels, context.getEquipmentRenderer()));
         this.addLayer(new ItemInHandLayer<>(this));
+        this.addLayer(new FishingLineLayer(this));
     }
 
     @Override
@@ -40,10 +44,34 @@ public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, 
         state.showRightPants = true;
         state.showLeftSleeve = true;
         state.showRightSleeve = true;
+        state.setRenderData(FishingLineLayer.HOOK_POSITION, findFishingHookPosition(entity, partialTick));
+        setFishingArmPose(entity, state);
     }
 
     @Override
     public Identifier getTextureLocation(AvatarRenderState state) {
         return TEXTURE;
+    }
+
+    private static Vec3 findFishingHookPosition(SoulmateEntity entity, float partialTick) {
+        int hookId = entity.getFishingHookId();
+        if (!entity.hasFishingHook()) {
+            return null;
+        }
+        if (!(entity.level().getEntity(hookId) instanceof FishingHook hook)) {
+            return null;
+        }
+        return new Vec3(hook.getX(partialTick), hook.getY(partialTick), hook.getZ(partialTick));
+    }
+
+    private static void setFishingArmPose(SoulmateEntity entity, AvatarRenderState state) {
+        if (!entity.hasFishingHook()) {
+            return;
+        }
+        if (entity.getMainArm() == HumanoidArm.RIGHT) {
+            state.rightArmPose = HumanoidModel.ArmPose.ITEM;
+            return;
+        }
+        state.leftArmPose = HumanoidModel.ArmPose.ITEM;
     }
 }

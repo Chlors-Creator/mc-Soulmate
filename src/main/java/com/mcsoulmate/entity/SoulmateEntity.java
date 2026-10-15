@@ -1,7 +1,11 @@
 package com.mcsoulmate.entity;
 
 import com.mcsoulmate.entity.ai.FarmingGoal;
+import com.mcsoulmate.entity.ai.FishingGoal;
 import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -55,6 +59,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     private static final int FLOAT_GOAL_PRIORITY = 0;
     private static final int ATTACK_GOAL_PRIORITY = 2;
     private static final int FARMING_GOAL_PRIORITY = 3;
+    private static final int FISHING_GOAL_PRIORITY = 3;
     private static final int ONE_ITEM = 1;
     private static final int FOLLOW_OWNER_GOAL_PRIORITY = 4;
     private static final int WANDER_GOAL_PRIORITY = 5;
@@ -63,6 +68,9 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     private static final int OWNER_HURT_BY_TARGET_PRIORITY = 1;
     private static final int OWNER_HURT_TARGET_PRIORITY = 2;
     private static final int HURT_BY_TARGET_PRIORITY = 3;
+    private static final int NO_FISHING_HOOK = -1;
+    private static final EntityDataAccessor<Integer> FISHING_HOOK_ID =
+            SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.INT);
 
     private final FarmInventory farmingInventory = new FarmInventory();
 
@@ -83,6 +91,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         this.goalSelector.addGoal(FLOAT_GOAL_PRIORITY, new FloatGoal(this));
         this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createRangedAttackGoal());
         this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createMeleeAttackGoal());
+        this.goalSelector.addGoal(FISHING_GOAL_PRIORITY, new FishingGoal(this));
         this.goalSelector.addGoal(FARMING_GOAL_PRIORITY, new FarmingGoal(this));
         this.goalSelector.addGoal(
                 FOLLOW_OWNER_GOAL_PRIORITY,
@@ -99,8 +108,26 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         this.targetSelector.addGoal(HURT_BY_TARGET_PRIORITY, new HurtByTargetGoal(this));
     }
 
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(FISHING_HOOK_ID, NO_FISHING_HOOK);
+    }
+
     public FarmInventory getFarmingInventory() {
         return this.farmingInventory;
+    }
+
+    public int getFishingHookId() {
+        return this.entityData.get(FISHING_HOOK_ID);
+    }
+
+    public boolean hasFishingHook() {
+        return this.getFishingHookId() != NO_FISHING_HOOK;
+    }
+
+    public void setFishingHookId(int hookId) {
+        this.entityData.set(FISHING_HOOK_ID, hookId);
     }
 
     public boolean isSafeForFarming() {

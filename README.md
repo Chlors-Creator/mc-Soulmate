@@ -41,3 +41,7 @@ When it has no combat target, a Soulmate searches nearby farmland for mature van
 After signing a contract, right-click the Soulmate with a crop seed (or a plantable crop such as carrots or potatoes) to add one item to its farming inventory. In survival mode the item is consumed.
 
 If a regular or trapped chest with room is within 20 blocks, the Soulmate walks to it and deposits the farming inventory. It merges matching item stacks already in the chest first, then fills available slots in order. If no chest has room, it keeps the harvest in its saved inventory.
+
+## Fishing
+
+Equip a fishing rod in the main hand. While safe and near fishable water, the Soulmate walks to the shore, faces the water, casts, waits for a bite, and reels in using vanilla fishing behavior. The fishing pose shows the held rod, bobber, and line. Caught items are added to the same saved inventory as farm produce and seeds, so nearby chests can receive and stack them automatically.
