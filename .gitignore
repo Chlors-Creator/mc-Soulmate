@@ -35,6 +35,7 @@ bin/
 ### Minecraft Modding ###
 run/
 !**/src/**/run/
+/config/mcsoulmate-api.properties
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/

@@ -1,5 +1,16 @@
 {
   "entity.mcsoulmate.soulmate": "Soulmate",
   "advancements.mcsoulmate.contract.title": "Pact Sealed",
-  "advancements.mcsoulmate.contract.description": "A diamond, a bond for life"
+  "advancements.mcsoulmate.contract.description": "A diamond, a bond for life",
+  "options.mcsoulmate.api_configuration": "API Configuration: %s",
+  "options.mcsoulmate.api_configuration.unconfigured": "Not configured",
+  "options.mcsoulmate.api_configuration.saved": "Saved",
+  "screen.mcsoulmate.api_configuration.title": "API Configuration",
+  "screen.mcsoulmate.api_configuration.provider": "Provider",
+  "screen.mcsoulmate.api_configuration.base_url": "API URL",
+  "screen.mcsoulmate.api_configuration.api_key": "API Key",
+  "screen.mcsoulmate.api_configuration.model": "Model",
+  "screen.mcsoulmate.api_configuration.save": "Save",
+  "screen.mcsoulmate.api_configuration.cancel": "Back",
+  "screen.mcsoulmate.api_configuration.local_notice": "Configuration is stored on this client"
 }

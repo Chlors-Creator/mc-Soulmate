@@ -26,6 +26,7 @@
 | 种子补充 | 签约后手持可种植作物右击 Soulmate，可向耕种库存加入一件；生存模式会消耗该物品 |
 | 箱子存储 | 20 格内有可用普通箱子或陷阱箱时前往存放；优先合并同类堆叠，再使用空槽 |
 | 钓鱼 | 安全且主手持钓鱼竿时，前往附近水岸、抛竿、等待咬钩并收线；鱼获进入独立存档库存，累计 10 件鱼类物品后暂停钓鱼并前往箱子存放 |
+| API 配置入口 | 在 Minecraft「选项」界面添加 API 配置按钮；编辑的服务商、地址、密钥与模型保存在客户端配置文件 |
 | 移动 | 签约后跟随主人；移动速度属性初值为 0.13，需在游戏内测量并校准寻路速度 |
 
 这些目标、武器和速度数值是初版默认值，后续可以根据玩法调整。
@@ -44,6 +45,9 @@ src/main/java/com/mcsoulmate/
   entity/ai/FarmActions.java         # 作物查找、收获、补种和内部库存
   entity/ai/FarmStorage.java         # 搜索附近箱子并合并/转移库存物品
   client/SoulmateClientEvents.java   # 客户端渲染器注册
+  client/SoulmateOptionsEvents.java # 在 Minecraft 选项页添加 API 配置入口
+  client/ApiConfigurationScreen.java # API 配置编辑界面
+  client/ApiConfigurationStore.java # 客户端本地 API 配置读写
   client/SoulmateRenderer.java       # 玩家模型、皮肤和装备层
   client/FishingLineLayer.java       # 根据同步鱼钩位置绘制鱼线
 src/main/resources/
@@ -58,6 +62,8 @@ src/main/templates/META-INF/
 ## 4. 服务器与客户端职责
 
 逻辑服务器负责契约和主人归属、目标选择、寻路、装备状态、箭矢生成、攻击伤害、耕种、钓鱼与箱子库存操作及 advancement 进度。鱼钩由服务器创建并按原版钓竿生命周期更新；农作物、种子与钓获物品分别进入随实体保存的库存。钓鱼库存累计 10 件鱼类物品后触发存箱，鱼类物品降到 10 件以下后恢复钓鱼。客户端根据同步的鱼钩实体 ID 绘制从手持钓竿到浮标的鱼线，并渲染原版浮标、手持物品和实体姿势。驯服状态与主人 UUID 使用原版 TamableAnimal 同步和保存。单人世界同样包含逻辑服务器。
+
+API 配置入口在客户端监听 Minecraft 选项界面的初始化事件。配置页只在本地读写服务商、API 地址、API 密钥和模型字段；当前没有 API 请求逻辑，密钥以纯文本保存在客户端 `config/mcsoulmate-api.properties` 中。
 
 ## 5. 皮肤与模型
 

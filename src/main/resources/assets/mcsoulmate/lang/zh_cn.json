@@ -1,5 +1,16 @@
 {
   "entity.mcsoulmate.soulmate": "灵魂伴侣",
   "advancements.mcsoulmate.contract.title": "签订契约",
-  "advancements.mcsoulmate.contract.description": "一颗永流传"
+  "advancements.mcsoulmate.contract.description": "一颗永流传",
+  "options.mcsoulmate.api_configuration": "API 配置：%s",
+  "options.mcsoulmate.api_configuration.unconfigured": "未配置",
+  "options.mcsoulmate.api_configuration.saved": "已保存",
+  "screen.mcsoulmate.api_configuration.title": "API 配置",
+  "screen.mcsoulmate.api_configuration.provider": "服务商",
+  "screen.mcsoulmate.api_configuration.base_url": "API 地址",
+  "screen.mcsoulmate.api_configuration.api_key": "API 密钥",
+  "screen.mcsoulmate.api_configuration.model": "模型",
+  "screen.mcsoulmate.api_configuration.save": "保存",
+  "screen.mcsoulmate.api_configuration.cancel": "返回",
+  "screen.mcsoulmate.api_configuration.local_notice": "配置保存在本地客户端"
 }
