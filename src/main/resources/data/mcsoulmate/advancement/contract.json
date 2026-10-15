@@ -1,0 +1,27 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:diamond"
+    },
+    "title": {
+      "translate": "advancements.mcsoulmate.contract.title"
+    },
+    "description": {
+      "translate": "advancements.mcsoulmate.contract.description"
+    },
+    "frame": "goal",
+    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "contract": {
+      "trigger": "minecraft:tame_animal",
+      "conditions": {
+        "entity": {
+          "type": "mcsoulmate:soulmate"
+        }
+      }
+    }
+  }
+}

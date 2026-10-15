@@ -1,34 +1,48 @@
 package com.mcsoulmate.entity;
 
+import com.mcsoulmate.entity.ai.FarmingGoal;
+import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.ai.goal.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.monster.RangedAttackMob;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
-public final class SoulmateEntity extends PathfinderMob implements RangedAttackMob {
+public final class SoulmateEntity extends TamableAnimal implements RangedAttackMob {
     private static final double PLAYER_SPRINT_BASE_SPEED = 0.13D;
     private static final double MAX_HEALTH = 20.0D;
     private static final double ATTACK_DAMAGE = 2.0D;
     private static final double FOLLOW_RANGE = 32.0D;
     private static final double GOAL_SPEED = 1.0D;
+    private static final double FOLLOW_OWNER_SPEED = 1.0D;
     private static final double ARROW_TARGET_HEIGHT_FACTOR = 1.0D / 3.0D;
     private static final double ARROW_ARC_FACTOR = 0.2D;
     private static final int RANGED_ATTACK_INTERVAL_TICKS = 20;
@@ -36,12 +50,21 @@ public final class SoulmateEntity extends PathfinderMob implements RangedAttackM
     private static final float ARROW_VELOCITY = 1.6F;
     private static final float ARROW_INACCURACY = 1.0F;
     private static final float PLAYER_LOOK_DISTANCE = 8.0F;
+    private static final float FOLLOW_OWNER_START_DISTANCE = 10.0F;
+    private static final float FOLLOW_OWNER_STOP_DISTANCE = 2.0F;
     private static final int FLOAT_GOAL_PRIORITY = 0;
     private static final int ATTACK_GOAL_PRIORITY = 2;
+    private static final int FARMING_GOAL_PRIORITY = 3;
+    private static final int ONE_ITEM = 1;
+    private static final int FOLLOW_OWNER_GOAL_PRIORITY = 4;
     private static final int WANDER_GOAL_PRIORITY = 5;
     private static final int LOOK_GOAL_PRIORITY = 6;
     private static final int RANDOM_LOOK_GOAL_PRIORITY = 7;
-    private static final int TARGET_GOAL_PRIORITY = 1;
+    private static final int OWNER_HURT_BY_TARGET_PRIORITY = 1;
+    private static final int OWNER_HURT_TARGET_PRIORITY = 2;
+    private static final int HURT_BY_TARGET_PRIORITY = 3;
+
+    private final FarmInventory farmingInventory = new FarmInventory();
 
     public SoulmateEntity(EntityType<? extends SoulmateEntity> entityType, Level level) {
         super(entityType, level);
@@ -60,13 +83,93 @@ public final class SoulmateEntity extends PathfinderMob implements RangedAttackM
         this.goalSelector.addGoal(FLOAT_GOAL_PRIORITY, new FloatGoal(this));
         this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createRangedAttackGoal());
         this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createMeleeAttackGoal());
+        this.goalSelector.addGoal(FARMING_GOAL_PRIORITY, new FarmingGoal(this));
+        this.goalSelector.addGoal(
+                FOLLOW_OWNER_GOAL_PRIORITY,
+                new FollowOwnerGoal(this, FOLLOW_OWNER_SPEED, FOLLOW_OWNER_START_DISTANCE, FOLLOW_OWNER_STOP_DISTANCE)
+        );
         this.goalSelector.addGoal(WANDER_GOAL_PRIORITY, new WaterAvoidingRandomStrollGoal(this, GOAL_SPEED));
         this.goalSelector.addGoal(LOOK_GOAL_PRIORITY, new LookAtPlayerGoal(this, Player.class, PLAYER_LOOK_DISTANCE));
         this.goalSelector.addGoal(RANDOM_LOOK_GOAL_PRIORITY, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(
-                TARGET_GOAL_PRIORITY,
-                new NearestAttackableTargetGoal<>(this, Monster.class, true)
+                OWNER_HURT_BY_TARGET_PRIORITY,
+                new OwnerHurtByTargetGoal(this)
         );
+        this.targetSelector.addGoal(OWNER_HURT_TARGET_PRIORITY, new OwnerHurtTargetGoal(this));
+        this.targetSelector.addGoal(HURT_BY_TARGET_PRIORITY, new HurtByTargetGoal(this));
+    }
+
+    public FarmInventory getFarmingInventory() {
+        return this.farmingInventory;
+    }
+
+    public boolean isSafeForFarming() {
+        return !this.isDeadOrDying() && this.getTarget() == null && !this.isPassenger();
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("FarmingInventory", ItemStack.CODEC.listOf(), this.farmingInventory.copyItems());
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.farmingInventory.replaceItems(
+                input.read("FarmingInventory", ItemStack.CODEC.listOf()).orElseGet(java.util.List::of)
+        );
+    }
+
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        ItemStack heldItem = player.getItemInHand(hand);
+        if (this.isTame() && this.isPlantingItem(heldItem)) {
+            return this.storePlantingItem(player, heldItem);
+        }
+        if (this.isTame() || !heldItem.is(Items.DIAMOND)) {
+            return super.mobInteract(player, hand);
+        }
+        if (!this.level().isClientSide()) {
+            if (!player.getAbilities().instabuild) {
+                heldItem.shrink(ONE_ITEM);
+            }
+            this.tame(player);
+            this.navigation.stop();
+            this.setTarget(null);
+            if (player instanceof ServerPlayer serverPlayer) {
+                CriteriaTriggers.TAME_ANIMAL.trigger(serverPlayer, this);
+            }
+        }
+        return InteractionResult.sidedSuccess(this.level().isClientSide());
+    }
+
+    private boolean isPlantingItem(ItemStack itemStack) {
+        return !itemStack.isEmpty() && Block.byItem(itemStack.getItem()) instanceof CropBlock;
+    }
+
+    private InteractionResult storePlantingItem(Player player, ItemStack heldItem) {
+        if (this.level().isClientSide()) {
+            return InteractionResult.sidedSuccess(true);
+        }
+
+        ItemStack plantingItem = heldItem.copy();
+        plantingItem.setCount(ONE_ITEM);
+        this.farmingInventory.addItem(plantingItem);
+        if (!player.getAbilities().instabuild) {
+            heldItem.shrink(ONE_ITEM);
+        }
+        return InteractionResult.sidedSuccess(false);
+    }
+
+    @Override
+    public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob partner) {
+        return null;
+    }
+
+    @Override
+    public boolean isFood(ItemStack itemStack) {
+        return false;
     }
 
     private RangedAttackGoal createRangedAttackGoal() {
