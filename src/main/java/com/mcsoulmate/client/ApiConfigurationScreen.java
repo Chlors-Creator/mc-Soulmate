@@ -45,7 +45,7 @@ public final class ApiConfigurationScreen extends Screen {
         this.providerField = this.addField("provider", this.draft.provider(), firstFieldY);
         this.baseUrlField = this.addField("base_url", this.draft.baseUrl(), firstFieldY + FIELD_ROW_SPACING);
         this.apiKeyField = this.addApiKeyField(firstFieldY + FIELD_ROW_SPACING * 2);
-        this.apiKeyField.setFormatter((text, cursor) ->
+        this.apiKeyField.addFormatter((text, cursor) ->
                 FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY)
         );
         this.modelField = this.addField("model", this.draft.model(), firstFieldY + FIELD_ROW_SPACING * 3);
@@ -72,7 +72,7 @@ public final class ApiConfigurationScreen extends Screen {
 
     @Override
     public void onClose() {
-        net.minecraft.client.Minecraft.getInstance().setScreen(this.parentScreen);
+        net.minecraft.client.Minecraft.getInstance().gui.setScreen(this.parentScreen);
     }
 
     private EditBox addField(String key, String value, int y) {
@@ -135,7 +135,7 @@ public final class ApiConfigurationScreen extends Screen {
                 this.modelField.getValue()
         );
         ApiConfigurationStore.save(this.draft);
-        net.minecraft.client.Minecraft.getInstance().setScreen(this.parentScreen);
+        net.minecraft.client.Minecraft.getInstance().gui.setScreen(this.parentScreen);
     }
 
     private void saveDraft() {

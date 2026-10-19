@@ -28,10 +28,27 @@ sourceSets.main.resources {
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
+    maven {
+        name = 'NeoForgedCdn'
+        url = 'https://neoforged.forgecdn.net/releases'
+    }
+    maven {
+        name = 'NeoForgedMojangMetaCdn'
+        url = 'https://neoforged.forgecdn.net/mojang-meta'
+    }
 }
 
-base {
-    archivesName = mod_id
+repositories.configureEach { repository ->
+    if (repository.name == 'NeoForged Releases') {
+        repository.url = uri('https://neoforged.forgecdn.net/releases')
+    }
+    if (repository.name == 'Mojang Meta') {
+        repository.url = uri('https://neoforged.forgecdn.net/mojang-meta')
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    archiveFileName = "Soulmate-v${project.version}.jar"
 }
 
 // Mojang ships Java 25 to end users in 26.2, so mods should target Java 25.

@@ -1,5 +1,6 @@
 {
   "entity.mcsoulmate.soulmate": "灵魂伴侣",
+  "item.mcsoulmate.soulmate_spawn_egg": "灵魂伴侣生物蛋",
   "advancements.mcsoulmate.contract.title": "签订契约",
   "advancements.mcsoulmate.contract.description": "一颗永流传",
   "options.mcsoulmate.api_configuration": "API 配置：%s",

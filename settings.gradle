@@ -1,6 +1,14 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        maven {
+            name = 'NeoForgedCdn'
+            url = 'https://neoforged.forgecdn.net/releases'
+        }
+        maven {
+            name = 'NeoForgedMojangMetaCdn'
+            url = 'https://neoforged.forgecdn.net/mojang-meta'
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 # MC Soulmate
 
-Minecraft Java Edition 26.2 NeoForge mod prototype.
+Minecraft Java Edition 26.2 NeoForge mod prototype targeting NeoForge 26.2.0.84 and newer.
 
 ## Build
 
@@ -8,13 +8,15 @@ Use JDK 25. The official 26.2 ModDevGradle template is configured to resolve the
 
 On Windows, run:
 
-    .\gradlew.bat jar
+    .\build-package.ps1
 
-The built mod is written to build\libs.
+The script uses the workspace's `.toolchain\jdk-25.0.1` and keeps the Gradle distribution and dependency cache under `.gradle-user-home`. It disables Gradle's configuration cache because the NeoForge artifact generation task cannot be cached with this toolchain. It builds against NeoForge 26.2.0.84; the mod metadata requires NeoForge 26.2.0.84 or newer. NeoForge releases and Mojang metadata use the official Forge CDN Maven endpoints as mirrors. The first build needs network access to resolve dependencies. The mod jar is written to `build\libs\Soulmate-v0.2.0.jar` and can be copied into a NeoForge 26.2 `mods` folder.
 
 ## Spawn and equipment
 
-The entity has no biome spawn entries or spawn egg. Summon it with:
+Each player receives one starter chest beside the world spawn. It contains a Soulmate spawn egg, one diamond, and one name tag. The chest is placed in an empty adjacent space with solid ground; if none is available, the mod logs a warning and tries again on that player's next login. Once placed, it is not generated again for that player.
+
+The Soulmate has no biome spawn entries. Use the spawn egg or summon it with:
 
     /summon mcsoulmate:soulmate ~ ~ ~
 

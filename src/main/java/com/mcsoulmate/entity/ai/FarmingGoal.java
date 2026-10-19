@@ -17,7 +17,6 @@ public final class FarmingGoal extends Goal {
     private static final int FARM_SEARCH_HORIZONTAL_RADIUS = 8;
     private static final int FARM_SEARCH_VERTICAL_RADIUS = 3;
     private static final int WORK_SEARCH_INTERVAL_TICKS = 40;
-    private static final double FARMING_MOVEMENT_SPEED = 1.0D;
     private static final double INTERACTION_DISTANCE_SQUARED = 4.0D;
     private static final double ITEM_DROP_OFFSET = 0.5D;
 
@@ -171,7 +170,7 @@ public final class FarmingGoal extends Goal {
                 this.workPosition.getX() + ITEM_DROP_OFFSET,
                 this.workPosition.getY() + ITEM_DROP_OFFSET,
                 this.workPosition.getZ() + ITEM_DROP_OFFSET,
-                FARMING_MOVEMENT_SPEED
+                SoulmateEntity.PLAYER_SPRINT_NAVIGATION_SPEED
         );
     }
 

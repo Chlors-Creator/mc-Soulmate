@@ -27,7 +27,6 @@ public final class FishingGoal extends Goal {
     private static final double INTERACTION_DISTANCE_SQUARED = 4.0D;
     private static final double SHORE_TARGET_OFFSET = 0.5D;
     private static final double CATCH_CAPTURE_RADIUS = 2.0D;
-    private static final double FISHING_NAVIGATION_SPEED = 1.0D;
     private static final int NO_FISHING_HOOK = -1;
     private static final float YAW_DIRECTION_OFFSET_DEGREES = 90.0F;
     private static final String FAKE_PLAYER_NAME = "Soulmate";
@@ -168,7 +167,9 @@ public final class FishingGoal extends Goal {
 
     private void syncFakePlayer() {
         this.fakePlayer.setPos(this.soulmate.getX(), this.soulmate.getY(), this.soulmate.getZ());
-        this.fakePlayer.setRot(this.soulmate.getYHeadRot(), this.soulmate.getXRot());
+        this.fakePlayer.setYRot(this.soulmate.getYHeadRot());
+        this.fakePlayer.setYHeadRot(this.soulmate.getYHeadRot());
+        this.fakePlayer.setXRot(this.soulmate.getXRot());
         this.fakePlayer.setYHeadRot(this.soulmate.getYHeadRot());
         this.fakePlayer.getInventory().setSelectedItem(this.soulmate.getMainHandItem());
     }
@@ -193,7 +194,7 @@ public final class FishingGoal extends Goal {
                 shore.getX() + SHORE_TARGET_OFFSET,
                 shore.getY(),
                 shore.getZ() + SHORE_TARGET_OFFSET,
-                FISHING_NAVIGATION_SPEED
+                SoulmateEntity.PLAYER_SPRINT_NAVIGATION_SPEED
         );
     }
 

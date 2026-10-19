@@ -2,7 +2,7 @@ package com.mcsoulmate.entity;
 
 import com.mcsoulmate.entity.ai.FarmingGoal;
 import com.mcsoulmate.entity.ai.FishingGoal;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -29,7 +29,7 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.monster.RangedAttackMob;
-import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.BowItem;
@@ -40,14 +40,19 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 
 public final class SoulmateEntity extends TamableAnimal implements RangedAttackMob {
-    private static final double PLAYER_SPRINT_BASE_SPEED = 0.13D;
+    private static final double PLAYER_WALK_MOVEMENT_SPEED = 0.1D;
+    private static final double PLAYER_SPRINT_ATTRIBUTE_BONUS = 0.3D;
+    private static final double PLAYER_SPRINT_MOVEMENT_SPEED =
+            PLAYER_WALK_MOVEMENT_SPEED * (1.0D + PLAYER_SPRINT_ATTRIBUTE_BONUS);
+    // Mob navigation applies speed as both forward input and movement speed, so compensate for the squared effect.
+    public static final double PLAYER_SPRINT_NAVIGATION_SPEED =
+            Math.sqrt(PLAYER_SPRINT_MOVEMENT_SPEED) / PLAYER_SPRINT_MOVEMENT_SPEED;
     private static final double MAX_HEALTH = 20.0D;
     private static final double ATTACK_DAMAGE = 2.0D;
     private static final double FOLLOW_RANGE = 32.0D;
-    private static final double GOAL_SPEED = 1.0D;
-    private static final double FOLLOW_OWNER_SPEED = 1.0D;
     private static final double ARROW_TARGET_HEIGHT_FACTOR = 1.0D / 3.0D;
     private static final double ARROW_ARC_FACTOR = 0.2D;
     private static final int RANGED_ATTACK_INTERVAL_TICKS = 20;
@@ -84,7 +89,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     public static AttributeSupplier.Builder createAttributes() {
         return LivingEntity.createLivingAttributes()
                 .add(Attributes.MAX_HEALTH, MAX_HEALTH)
-                .add(Attributes.MOVEMENT_SPEED, PLAYER_SPRINT_BASE_SPEED)
+                .add(Attributes.MOVEMENT_SPEED, PLAYER_WALK_MOVEMENT_SPEED)
                 .add(Attributes.ATTACK_DAMAGE, ATTACK_DAMAGE)
                 .add(Attributes.FOLLOW_RANGE, FOLLOW_RANGE);
     }
@@ -98,9 +103,17 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         this.goalSelector.addGoal(FISHING_GOAL_PRIORITY, new FishingGoal(this));
         this.goalSelector.addGoal(
                 FOLLOW_OWNER_GOAL_PRIORITY,
-                new FollowOwnerGoal(this, FOLLOW_OWNER_SPEED, FOLLOW_OWNER_START_DISTANCE, FOLLOW_OWNER_STOP_DISTANCE)
+                new FollowOwnerGoal(
+                        this,
+                        PLAYER_SPRINT_NAVIGATION_SPEED,
+                        FOLLOW_OWNER_START_DISTANCE,
+                        FOLLOW_OWNER_STOP_DISTANCE
+                )
         );
-        this.goalSelector.addGoal(WANDER_GOAL_PRIORITY, new WaterAvoidingRandomStrollGoal(this, GOAL_SPEED));
+        this.goalSelector.addGoal(
+                WANDER_GOAL_PRIORITY,
+                new WaterAvoidingRandomStrollGoal(this, PLAYER_SPRINT_NAVIGATION_SPEED)
+        );
         this.goalSelector.addGoal(LOOK_GOAL_PRIORITY, new LookAtPlayerGoal(this, Player.class, PLAYER_LOOK_DISTANCE));
         this.goalSelector.addGoal(RANDOM_LOOK_GOAL_PRIORITY, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(
@@ -115,6 +128,23 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(FISHING_HOOK_ID, NO_FISHING_HOOK);
+    }
+
+    @Override
+    public void travel(Vec3 input) {
+        this.updateSprintingForNavigation();
+        super.travel(input);
+    }
+
+    private void updateSprintingForNavigation() {
+        if (this.level().isClientSide()) {
+            return;
+        }
+
+        boolean navigating = this.getNavigation().isInProgress();
+        if (this.isSprinting() != navigating) {
+            this.setSprinting(navigating);
+        }
     }
 
     public FarmInventory getFarmingInventory() {
@@ -186,7 +216,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
                 CriteriaTriggers.TAME_ANIMAL.trigger(serverPlayer, this);
             }
         }
-        return InteractionResult.sidedSuccess(this.level().isClientSide());
+        return this.level().isClientSide() ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
     }
 
     private boolean isPlantingItem(ItemStack itemStack) {
@@ -195,7 +225,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
 
     private InteractionResult storePlantingItem(Player player, ItemStack heldItem) {
         if (this.level().isClientSide()) {
-            return InteractionResult.sidedSuccess(true);
+            return InteractionResult.SUCCESS;
         }
 
         ItemStack plantingItem = heldItem.copy();
@@ -204,7 +234,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         if (!player.getAbilities().instabuild) {
             heldItem.shrink(ONE_ITEM);
         }
-        return InteractionResult.sidedSuccess(false);
+        return InteractionResult.CONSUME;
     }
 
     @Override
@@ -218,7 +248,12 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     }
 
     private RangedAttackGoal createRangedAttackGoal() {
-        return new RangedAttackGoal(this, GOAL_SPEED, RANGED_ATTACK_INTERVAL_TICKS, RANGED_ATTACK_RANGE) {
+        return new RangedAttackGoal(
+                this,
+                PLAYER_SPRINT_NAVIGATION_SPEED,
+                RANGED_ATTACK_INTERVAL_TICKS,
+                RANGED_ATTACK_RANGE
+        ) {
             @Override
             public boolean canUse() {
                 return SoulmateEntity.this.holdsBow() && super.canUse();
@@ -246,7 +281,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     }
 
     private MeleeAttackGoal createMeleeAttackGoal() {
-        return new MeleeAttackGoal(this, GOAL_SPEED, true) {
+        return new MeleeAttackGoal(this, PLAYER_SPRINT_NAVIGATION_SPEED, true) {
             @Override
             public boolean canUse() {
                 return !SoulmateEntity.this.holdsBow() && super.canUse();

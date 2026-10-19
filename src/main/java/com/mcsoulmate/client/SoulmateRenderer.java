@@ -2,24 +2,27 @@ package com.mcsoulmate.client;
 
 import com.mcsoulmate.McSoulmate;
 import com.mcsoulmate.entity.SoulmateEntity;
-import net.minecraft.client.model.ArmorModelSet;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.entity.ArmorModelSet;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.core.ClientAsset;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.projectile.FishingHook;
+import net.minecraft.world.entity.player.PlayerModelType;
+import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.phys.Vec3;
 
 public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, AvatarRenderState, PlayerModel> {
     private static final float SHADOW_RADIUS = 0.5F;
-    private static final Identifier TEXTURE =
-            Identifier.fromNamespaceAndPath(McSoulmate.MOD_ID, "textures/entity/soulmate.png");
+    private static final Identifier SKIN_ASSET =
+            Identifier.fromNamespaceAndPath(McSoulmate.MOD_ID, "entity/soulmate");
 
     public SoulmateRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel(context.bakeLayer(ModelLayers.PLAYER_SLIM), true), SHADOW_RADIUS);
@@ -32,7 +35,14 @@ public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, 
 
     @Override
     public AvatarRenderState createRenderState() {
-        return new AvatarRenderState();
+        AvatarRenderState state = new AvatarRenderState();
+        state.skin = PlayerSkin.insecure(
+                new ClientAsset.ResourceTexture(SKIN_ASSET),
+                null,
+                null,
+                PlayerModelType.SLIM
+        );
+        return state;
     }
 
     @Override
@@ -50,7 +60,7 @@ public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, 
 
     @Override
     public Identifier getTextureLocation(AvatarRenderState state) {
-        return TEXTURE;
+        return state.skin.body().texturePath();
     }
 
     private static Vec3 findFishingHookPosition(SoulmateEntity entity, float partialTick) {

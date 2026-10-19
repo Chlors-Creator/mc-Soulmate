@@ -2,18 +2,20 @@
 
 ## 1. 项目目标与当前状态
 
-本项目为 Minecraft Java Edition 26.2 与 NeoForge 初版 Mod。它注册一种只通过命令召唤的玩家外观生物，使用一颗钻石签订契约后成为该玩家的伙伴，跟随并保护唯一主人；保留近战与弓箭远程攻击切换、装备和固定皮肤。
+本项目为 Minecraft Java Edition 26.2 与 NeoForge 初版 Mod。它注册一种玩家外观生物，并为每位玩家在世界出生点旁放置一个装有该生物生物蛋、一颗钻石和一个命名牌的补给箱。玩家可用钻石签订契约，使生物成为该玩家的伙伴，跟随并保护唯一主人；保留近战与弓箭远程攻击切换、装备和固定皮肤。
 
-初版源码、资源和 MDK 构建配置已建立。契约与护主行为已写入源码，但尚未完成成功打包或游戏内验证：当前终端默认 Java 21，而项目以 Java 25 为目标；Gradle Wrapper 9.2.1 下载时无法解析 `services.gradle.org`，因此未进入 Java 编译阶段。
+初版源码、资源和 MDK 构建配置已建立。构建脚本使用工作区内的 Java 25 和 Gradle 缓存，并通过 NeoForged 官方 CDN 获取依赖。`build-package.ps1` 已针对 NeoForge 26.2.0.84 成功完成 Java 编译并生成 `build/libs/Soulmate-v0.2.0.jar`；游戏内行为仍待验证。
 
 ## 2. 已实现的初版行为
 
 | 项目 | 初版实现 |
 | --- | --- |
-| Minecraft / NeoForge | 26.2 / NeoForge 26.2.0.90，基于官方 ModDevGradle MDK |
+| Minecraft / NeoForge | 26.2 / NeoForge 26.2.0.84，基于官方 ModDevGradle MDK |
 | 实体 ID | `mcsoulmate:soulmate` |
-| 自然生成 | 未注册群系生成或 biome modifier；没有刷怪蛋 |
-| 召唤 | `/summon mcsoulmate:soulmate ~ ~ ~` |
+| 自然生成 | 未注册群系生成或 biome modifier |
+| 生物蛋与补给箱 | 注册 Soulmate 生物蛋并加入刷怪蛋创造栏；每位玩家首次成功领取时，在世界出生点相邻的空地放置一个箱子，内含生物蛋、一颗钻石和一个命名牌 |
+| 补给箱重试 | 出生点周围八个相邻位置都不满足空位和坚实地面条件时记录警告，并在该玩家下次登录时重试 |
+| 召唤 | 使用 Soulmate 生物蛋或 `/summon mcsoulmate:soulmate ~ ~ ~` |
 | 皮肤 | 固定使用 `assets/mcsoulmate/textures/entity/soulmate.png` |
 | 模型 | 原版 `PlayerModel`，Alex 细手臂层 |
 | 装备 | 使用生物标准装备槽，渲染盔甲和手持物品 |
@@ -37,6 +39,7 @@
 src/main/java/com/mcsoulmate/
   McSoulmate.java                    # Mod 初始化、实体与属性注册
   entity/ModEntityTypes.java         # 实体类型注册
+  entity/ModItems.java               # Soulmate 生物蛋注册
   entity/SoulmateEntity.java         # 契约、主人关系、目标选择、移动和攻击行为
   entity/FarmInventory.java          # 可保存的农作物、种子和钓获物品库存
   entity/ai/FarmingGoal.java         # 安全状态下的耕作与箱子存放调度
@@ -44,6 +47,7 @@ src/main/java/com/mcsoulmate/
   entity/ai/FishingSpotSearch.java   # 搜索可站立的水岸钓鱼位置
   entity/ai/FarmActions.java         # 作物查找、收获、补种和内部库存
   entity/ai/FarmStorage.java         # 搜索附近箱子并合并/转移库存物品
+  server/StarterChestEvents.java     # 玩家首次领取时在世界出生点旁放置补给箱
   client/SoulmateClientEvents.java   # 客户端渲染器注册
   client/SoulmateOptionsEvents.java # 在 Minecraft 选项页添加 API 配置入口
   client/ApiConfigurationScreen.java # API 配置编辑界面
@@ -53,6 +57,7 @@ src/main/java/com/mcsoulmate/
 src/main/resources/
   META-INF/accesstransformer.cfg       # 读取原版钓鱼钩的咬钩同步状态
   assets/mcsoulmate/lang/            # 中文与英文名称
+  assets/mcsoulmate/items/           # 生物蛋物品模型定义
   assets/mcsoulmate/textures/entity/ # 固定皮肤
   data/mcsoulmate/advancement/       # 契约成就
 src/main/templates/META-INF/
@@ -103,29 +108,30 @@ API 配置入口在客户端监听 Minecraft 选项界面的初始化事件。�
 /item replace entity @e[type=mcsoulmate:soulmate,limit=1,sort=nearest] armor.chest with minecraft:iron_chestplate
 ```
 
-## 8. 不自然生成
+## 8. 出生点补给与自然生成
 
-实体类型注册本身不会将生物加入群系生成表。项目不注册 biome modifier、自然生成权重或刷怪蛋。开发时通过 `/summon` 命令创建实体。
+实体类型注册本身不会将生物加入群系生成表。项目不注册 biome modifier 或自然生成权重。每位玩家首次领取时，服务器在主世界共享出生点周围最多八个相邻位置中查找一个空位，要求位置为空且下方方块顶面坚实；补给箱内放置 Soulmate 生物蛋、一颗钻石和一个命名牌。成功后用玩家 scoreboard tag 记录已发放状态，重登不会再次生成。若附近没有合适位置，服务器记录警告并在下次登录重试。玩家也可使用生物蛋或 `/summon mcsoulmate:soulmate ~ ~ ~` 召唤。
 
 ## 9. 构建与验证
 
 官方 26.2 ModDevGradle 模板配置 Java 25 工具链。Windows 下使用：
 
 ```powershell
-.\gradlew.bat jar
+.\build-package.ps1
 ```
 
-成功后 jar 位于 `build/libs/`。当前环境未产出 jar；原因和状态见第 1 节。完成构建后需在客户端验证召唤、固定皮肤、Alex 手臂、盔甲、手持物品、目标选择、近战和弓箭行为，并在多人环境确认服务器权威状态同步。
+成功后 jar 位于 `build/libs/Soulmate-v0.2.0.jar`，可放入 NeoForge 26.2 的 `mods` 目录。构建成功只验证了编译和打包；仍需在客户端验证召唤、固定皮肤、Alex 手臂、盔甲、手持物品、目标选择、近战和弓箭行为，并在多人环境确认服务器权威状态同步。
 
 ## 10. 验收清单
 
 - [x] 建立 26.2 NeoForge MDK 工程和 Java 25 工具链配置。
-- [x] 注册 `mcsoulmate:soulmate`，未添加自然生成配置或刷怪蛋。
+- [x] 注册 `mcsoulmate:soulmate`，未添加自然生成配置。
+- [x] 注册 Soulmate 生物蛋，并在玩家首次登录时于世界出生点旁发放含生物蛋、钻石和命名牌的补给箱。
 - [x] 加入固定皮肤、Alex PlayerModel、盔甲层和手持物品层代码。
 - [x] 加入初版近战与弓箭远程攻击逻辑。
 - [x] 加入钻石契约、主人保存/同步、狼式护主目标与签约成就。
 - [x] 加入安全状态下的耕种、补种和 20 格内箱子存储逻辑。
-- [ ] `gradlew jar` 成功生成 Mod jar。
+- [x] `build-package.ps1` 成功生成 `Soulmate-v0.2.0.jar`。
 - [ ] 游戏内验证渲染、装备、攻击、耕种、钓鱼、箱子整理和命令召唤。
 - [ ] 平地实测并校准玩家冲刺速度及奔跑动作。
 - [ ] 多人服务器验证实体状态同步。
