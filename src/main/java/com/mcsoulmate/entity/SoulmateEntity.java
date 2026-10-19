@@ -2,6 +2,7 @@ package com.mcsoulmate.entity;
 
 import com.mcsoulmate.entity.ai.FarmingGoal;
 import com.mcsoulmate.entity.ai.FishingGoal;
+import com.mcsoulmate.entity.ai.SoulmateCombatGoals;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -23,16 +24,16 @@ import net.minecraft.world.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
-import net.minecraft.world.entity.monster.RangedAttackMob;
-import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.monster.CrossbowAttackMob;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -42,7 +43,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
-public final class SoulmateEntity extends TamableAnimal implements RangedAttackMob {
+public final class SoulmateEntity extends TamableAnimal implements CrossbowAttackMob {
     private static final double PLAYER_WALK_MOVEMENT_SPEED = 0.1D;
     private static final double PLAYER_SPRINT_ATTRIBUTE_BONUS = 0.3D;
     private static final double PLAYER_SPRINT_MOVEMENT_SPEED =
@@ -53,12 +54,6 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     private static final double MAX_HEALTH = 20.0D;
     private static final double ATTACK_DAMAGE = 2.0D;
     private static final double FOLLOW_RANGE = 32.0D;
-    private static final double ARROW_TARGET_HEIGHT_FACTOR = 1.0D / 3.0D;
-    private static final double ARROW_ARC_FACTOR = 0.2D;
-    private static final int RANGED_ATTACK_INTERVAL_TICKS = 20;
-    private static final float RANGED_ATTACK_RANGE = 15.0F;
-    private static final float ARROW_VELOCITY = 1.6F;
-    private static final float ARROW_INACCURACY = 1.0F;
     private static final float PLAYER_LOOK_DISTANCE = 8.0F;
     private static final float FOLLOW_OWNER_START_DISTANCE = 10.0F;
     private static final float FOLLOW_OWNER_STOP_DISTANCE = 2.0F;
@@ -78,6 +73,8 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     private static final int FISHES_PER_STORAGE_BATCH = 10;
     private static final EntityDataAccessor<Integer> FISHING_HOOK_ID =
             SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> IS_CHARGING_CROSSBOW =
+            SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final FarmInventory farmingInventory = new FarmInventory();
     private final FarmInventory fishingInventory = new FarmInventory();
@@ -97,8 +94,9 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(FLOAT_GOAL_PRIORITY, new FloatGoal(this));
-        this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createRangedAttackGoal());
-        this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createMeleeAttackGoal());
+        this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, SoulmateCombatGoals.createBowAttackGoal(this));
+        this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, SoulmateCombatGoals.createCrossbowAttackGoal(this));
+        this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, SoulmateCombatGoals.createMeleeAttackGoal(this));
         this.goalSelector.addGoal(FARMING_GOAL_PRIORITY, new FarmingGoal(this));
         this.goalSelector.addGoal(FISHING_GOAL_PRIORITY, new FishingGoal(this));
         this.goalSelector.addGoal(
@@ -128,6 +126,7 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(FISHING_HOOK_ID, NO_FISHING_HOOK);
+        builder.define(IS_CHARGING_CROSSBOW, false);
     }
 
     @Override
@@ -247,81 +246,55 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         return false;
     }
 
-    private RangedAttackGoal createRangedAttackGoal() {
-        return new RangedAttackGoal(
-                this,
-                PLAYER_SPRINT_NAVIGATION_SPEED,
-                RANGED_ATTACK_INTERVAL_TICKS,
-                RANGED_ATTACK_RANGE
-        ) {
-            @Override
-            public boolean canUse() {
-                return SoulmateEntity.this.holdsBow() && super.canUse();
-            }
-
-            @Override
-            public boolean canContinueToUse() {
-                return SoulmateEntity.this.holdsBow() && super.canContinueToUse();
-            }
-
-            @Override
-            public void tick() {
-                if (SoulmateEntity.this.getTarget() != null && !SoulmateEntity.this.isUsingItem()) {
-                    SoulmateEntity.this.startUsingItem(InteractionHand.MAIN_HAND);
-                }
-                super.tick();
-            }
-
-            @Override
-            public void stop() {
-                super.stop();
-                SoulmateEntity.this.stopUsingItem();
-            }
-        };
-    }
-
-    private MeleeAttackGoal createMeleeAttackGoal() {
-        return new MeleeAttackGoal(this, PLAYER_SPRINT_NAVIGATION_SPEED, true) {
-            @Override
-            public boolean canUse() {
-                return !SoulmateEntity.this.holdsBow() && super.canUse();
-            }
-
-            @Override
-            public boolean canContinueToUse() {
-                return !SoulmateEntity.this.holdsBow() && super.canContinueToUse();
-            }
-        };
-    }
-
-    private boolean holdsBow() {
-        return this.getMainHandItem().getItem() instanceof BowItem;
-    }
-
     @Override
     public boolean canPickUpLoot() {
         return true;
     }
 
     @Override
-    public void performRangedAttack(LivingEntity target, float pullProgress) {
-        if (!this.holdsBow()) {
-            return;
+    public ItemStack equipItemIfPossible(ServerLevel level, ItemStack itemStack) {
+        if (!isPlayerOfferedEquipment(itemStack)) {
+            return super.equipItemIfPossible(level, itemStack);
         }
-        this.stopUsingItem();
-        AbstractArrow arrow = ((ArrowItem) Items.ARROW).createArrow(
-                this.level(),
-                Items.ARROW.getDefaultInstance(),
-                this,
-                this.getMainHandItem()
-        );
-        double xDistance = target.getX() - this.getX();
-        double zDistance = target.getZ() - this.getZ();
-        double horizontalDistance = Math.sqrt(xDistance * xDistance + zDistance * zDistance);
-        double yDistance = target.getY(ARROW_TARGET_HEIGHT_FACTOR) - arrow.getY()
-                + horizontalDistance * ARROW_ARC_FACTOR;
-        arrow.shoot(xDistance, yDistance, zDistance, ARROW_VELOCITY * pullProgress, ARROW_INACCURACY);
-        this.level().addFreshEntity(arrow);
-        this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F);
+
+        ItemStack oldItem = this.getMainHandItem();
+        if (!oldItem.isEmpty()) {
+            this.spawnAtLocation(level, oldItem.copy());
+        }
+        ItemStack equippedItem = itemStack.copyWithCount(ONE_ITEM);
+        this.setItemSlotAndDropWhenKilled(EquipmentSlot.MAINHAND, equippedItem);
+        this.setPersistenceRequired();
+        return equippedItem;
+    }
+
+    private static boolean isPlayerOfferedEquipment(ItemStack itemStack) {
+        return itemStack.getItem() instanceof BowItem
+                || itemStack.getItem() instanceof CrossbowItem
+                || itemStack.getItem() instanceof FishingRodItem;
+    }
+
+    @Override
+    public ItemStack getProjectile(ItemStack weapon) {
+        return weapon.getItem() instanceof BowItem || weapon.getItem() instanceof CrossbowItem
+                ? Items.ARROW.getDefaultInstance() : super.getProjectile(weapon);
+    }
+
+    @Override
+    public void setChargingCrossbow(boolean isCharging) {
+        this.entityData.set(IS_CHARGING_CROSSBOW, isCharging);
+    }
+
+    public boolean isChargingCrossbow() {
+        return this.entityData.get(IS_CHARGING_CROSSBOW);
+    }
+
+    @Override
+    public void onCrossbowAttackPerformed() {
+        this.setChargingCrossbow(false);
+    }
+
+    @Override
+    public void performRangedAttack(LivingEntity target, float pullProgress) {
+        SoulmateCombatGoals.performRangedAttack(this, target, pullProgress);
     }
 }
