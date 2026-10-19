@@ -1,6 +1,6 @@
 {
-  "entity.mcsoulmate.soulmate": "Soulmate",
-  "item.mcsoulmate.soulmate_spawn_egg": "Soulmate Spawn Egg",
+  "entity.mcsoulmate.soulmate": "Her",
+  "item.mcsoulmate.soulmate_spawn_egg": "Her",
   "advancements.mcsoulmate.contract.title": "Pact Sealed",
   "advancements.mcsoulmate.contract.description": "A diamond, a bond for life",
   "options.mcsoulmate.api_configuration": "API Configuration: %s",
