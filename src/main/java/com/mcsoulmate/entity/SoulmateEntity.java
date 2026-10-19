@@ -60,12 +60,12 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
     private static final int FLOAT_GOAL_PRIORITY = 0;
     private static final int ATTACK_GOAL_PRIORITY = 2;
     private static final int FARMING_GOAL_PRIORITY = 3;
-    private static final int FISHING_GOAL_PRIORITY = 3;
     private static final int ONE_ITEM = 1;
     private static final int FOLLOW_OWNER_GOAL_PRIORITY = 4;
-    private static final int WANDER_GOAL_PRIORITY = 5;
-    private static final int LOOK_GOAL_PRIORITY = 6;
-    private static final int RANDOM_LOOK_GOAL_PRIORITY = 7;
+    private static final int FISHING_GOAL_PRIORITY = 5;
+    private static final int WANDER_GOAL_PRIORITY = 6;
+    private static final int LOOK_GOAL_PRIORITY = 7;
+    private static final int RANDOM_LOOK_GOAL_PRIORITY = 8;
     private static final int OWNER_HURT_BY_TARGET_PRIORITY = 1;
     private static final int OWNER_HURT_TARGET_PRIORITY = 2;
     private static final int HURT_BY_TARGET_PRIORITY = 3;
@@ -94,8 +94,8 @@ public final class SoulmateEntity extends TamableAnimal implements RangedAttackM
         this.goalSelector.addGoal(FLOAT_GOAL_PRIORITY, new FloatGoal(this));
         this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createRangedAttackGoal());
         this.goalSelector.addGoal(ATTACK_GOAL_PRIORITY, createMeleeAttackGoal());
-        this.goalSelector.addGoal(FISHING_GOAL_PRIORITY, new FishingGoal(this));
         this.goalSelector.addGoal(FARMING_GOAL_PRIORITY, new FarmingGoal(this));
+        this.goalSelector.addGoal(FISHING_GOAL_PRIORITY, new FishingGoal(this));
         this.goalSelector.addGoal(
                 FOLLOW_OWNER_GOAL_PRIORITY,
                 new FollowOwnerGoal(this, FOLLOW_OWNER_SPEED, FOLLOW_OWNER_START_DISTANCE, FOLLOW_OWNER_STOP_DISTANCE)

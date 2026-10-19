@@ -2,6 +2,8 @@ package com.mcsoulmate.entity.ai;
 
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import com.mcsoulmate.entity.FarmInventory;
 import com.mcsoulmate.entity.SoulmateEntity;
@@ -11,10 +13,12 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 final class FarmStorage {
     private static final int CHEST_SEARCH_RADIUS = 20;
     private static final int CHEST_SEARCH_RADIUS_SQUARED = CHEST_SEARCH_RADIUS * CHEST_SEARCH_RADIUS;
+    private static final int CHUNK_SIZE_BITS = 4;
 
     private FarmStorage() {
     }
@@ -25,14 +29,25 @@ final class FarmStorage {
         }
 
         BlockPos center = soulmate.blockPosition();
-        BlockPos minimum = center.offset(-CHEST_SEARCH_RADIUS, -CHEST_SEARCH_RADIUS, -CHEST_SEARCH_RADIUS);
-        BlockPos maximum = center.offset(CHEST_SEARCH_RADIUS, CHEST_SEARCH_RADIUS, CHEST_SEARCH_RADIUS);
-        return BlockPos.betweenClosedStream(minimum, maximum)
+        return nearbyLoadedChunks(level, center)
+                .flatMap(chunk -> chunk.getBlockEntities().keySet().stream())
                 .map(BlockPos::immutable)
                 .filter(position -> isWithinRange(soulmate, position))
-                .filter(level::hasChunkAt)
+                .filter(position -> level.getBlockState(position).getBlock() instanceof ChestBlock)
                 .filter(position -> hasSpaceInChest(level, position, inventory))
                 .min(Comparator.comparingDouble(position -> distanceSquared(soulmate, position)));
+    }
+
+    private static Stream<LevelChunk> nearbyLoadedChunks(ServerLevel level, BlockPos center) {
+        int minimumChunkX = (center.getX() - CHEST_SEARCH_RADIUS) >> CHUNK_SIZE_BITS;
+        int maximumChunkX = (center.getX() + CHEST_SEARCH_RADIUS) >> CHUNK_SIZE_BITS;
+        int minimumChunkZ = (center.getZ() - CHEST_SEARCH_RADIUS) >> CHUNK_SIZE_BITS;
+        int maximumChunkZ = (center.getZ() + CHEST_SEARCH_RADIUS) >> CHUNK_SIZE_BITS;
+        return IntStream.rangeClosed(minimumChunkX, maximumChunkX)
+                .boxed()
+                .flatMap(chunkX -> IntStream.rangeClosed(minimumChunkZ, maximumChunkZ)
+                        .mapToObj(chunkZ -> level.getChunkSource().getChunkNow(chunkX, chunkZ)))
+                .filter(chunk -> chunk != null);
     }
 
     static void depositInventory(SoulmateEntity soulmate, BlockPos chestPosition, FarmInventory inventory) {
