@@ -18,7 +18,7 @@ public final class SoulmateCombatGoals {
     private static final double ARROW_TARGET_HEIGHT_FACTOR = 1.0D / 3.0D;
     private static final double ARROW_ARC_FACTOR = 0.2D;
     private static final int RANGED_ATTACK_INTERVAL_TICKS = 20;
-    private static final float RANGED_ATTACK_RANGE = 15.0F;
+    private static final float RANGED_ATTACK_RANGE = 32.0F;
     private static final float ARROW_VELOCITY = 1.6F;
     private static final float ARROW_INACCURACY = 1.0F;
 
@@ -70,12 +70,12 @@ public final class SoulmateCombatGoals {
         return new MeleeAttackGoal(soulmate, SoulmateEntity.PLAYER_SPRINT_NAVIGATION_SPEED, true) {
             @Override
             public boolean canUse() {
-                return !isHoldingRangedWeapon(soulmate) && super.canUse();
+                return soulmate.isHoldingMeleeWeapon() && super.canUse();
             }
 
             @Override
             public boolean canContinueToUse() {
-                return !isHoldingRangedWeapon(soulmate) && super.canContinueToUse();
+                return soulmate.isHoldingMeleeWeapon() && super.canContinueToUse();
             }
         };
     }
@@ -114,7 +114,4 @@ public final class SoulmateCombatGoals {
         return soulmate.getMainHandItem().getItem() instanceof CrossbowItem;
     }
 
-    private static boolean isHoldingRangedWeapon(SoulmateEntity soulmate) {
-        return isHoldingBow(soulmate) || isHoldingCrossbow(soulmate);
-    }
 }

@@ -10,7 +10,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.AgeableMob;
@@ -30,14 +29,15 @@ import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
-import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -70,14 +70,12 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
     private static final int OWNER_HURT_TARGET_PRIORITY = 2;
     private static final int HURT_BY_TARGET_PRIORITY = 3;
     private static final int NO_FISHING_HOOK = -1;
-    private static final int FISHES_PER_STORAGE_BATCH = 10;
     private static final EntityDataAccessor<Integer> FISHING_HOOK_ID =
             SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> IS_CHARGING_CROSSBOW =
             SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.BOOLEAN);
 
-    private final FarmInventory farmingInventory = new FarmInventory();
-    private final FarmInventory fishingInventory = new FarmInventory();
+    private final SoulmateInventory inventories = new SoulmateInventory();
 
     public SoulmateEntity(EntityType<? extends SoulmateEntity> entityType, Level level) {
         super(entityType, level);
@@ -147,20 +145,18 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
     }
 
     public FarmInventory getFarmingInventory() {
-        return this.farmingInventory;
+        return this.inventories.farming();
     }
 
     public FarmInventory getFishingInventory() {
-        return this.fishingInventory;
+        return this.inventories.fishing();
     }
 
     public boolean hasFishingStorageBatchReady() {
-        return this.fishingInventory.countItems(ItemTags.FISHES) >= FISHES_PER_STORAGE_BATCH;
+        return this.inventories.hasFishingStorageBatchReady();
     }
 
-    public int getFishingHookId() {
-        return this.entityData.get(FISHING_HOOK_ID);
-    }
+    public int getFishingHookId() { return this.entityData.get(FISHING_HOOK_ID); }
 
     public boolean hasFishingHook() {
         return this.getFishingHookId() != NO_FISHING_HOOK;
@@ -171,28 +167,25 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
     }
 
     public boolean isSafeForFarming() {
-        return !this.isDeadOrDying() && this.getTarget() == null && !this.isPassenger();
+        return !this.isDeadOrDying() && !this.inventories.equipment().isInCombatMode(this) && !this.isPassenger();
     }
 
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
         super.addAdditionalSaveData(output);
-        output.store("FarmingInventory", ItemStack.CODEC.listOf(), this.farmingInventory.copyItems());
-        output.store("FishingInventory", ItemStack.CODEC.listOf(), this.fishingInventory.copyItems());
+        this.inventories.save(output);
     }
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
-        this.farmingInventory.replaceItems(
-                input.read("FarmingInventory", ItemStack.CODEC.listOf()).orElseGet(java.util.List::of)
-        );
-        this.fishingInventory.replaceItems(
-                input.read("FishingInventory", ItemStack.CODEC.listOf()).orElseGet(java.util.List::of)
-        );
-        for (ItemStack fish : this.farmingInventory.removeItems(ItemTags.FISHES)) {
-            this.fishingInventory.addItem(fish);
-        }
+        this.inventories.load(input);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        this.inventories.equipment().updateActiveWeapon(this);
     }
 
     @Override
@@ -229,7 +222,7 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
 
         ItemStack plantingItem = heldItem.copy();
         plantingItem.setCount(ONE_ITEM);
-        this.farmingInventory.addItem(plantingItem);
+        this.getFarmingInventory().addItem(plantingItem);
         if (!player.getAbilities().instabuild) {
             heldItem.shrink(ONE_ITEM);
         }
@@ -252,25 +245,33 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
     }
 
     @Override
-    public ItemStack equipItemIfPossible(ServerLevel level, ItemStack itemStack) {
-        if (!isPlayerOfferedEquipment(itemStack)) {
-            return super.equipItemIfPossible(level, itemStack);
-        }
-
-        ItemStack oldItem = this.getMainHandItem();
-        if (!oldItem.isEmpty()) {
-            this.spawnAtLocation(level, oldItem.copy());
-        }
-        ItemStack equippedItem = itemStack.copyWithCount(ONE_ITEM);
-        this.setItemSlotAndDropWhenKilled(EquipmentSlot.MAINHAND, equippedItem);
-        this.setPersistenceRequired();
-        return equippedItem;
+    public boolean wantsToPickUp(ServerLevel level, ItemStack itemStack) {
+        return this.inventories.equipment().shouldPickUp(this, itemStack);
     }
 
-    private static boolean isPlayerOfferedEquipment(ItemStack itemStack) {
-        return itemStack.getItem() instanceof BowItem
-                || itemStack.getItem() instanceof CrossbowItem
-                || itemStack.getItem() instanceof FishingRodItem;
+    @Override
+    public ItemStack equipItemIfPossible(ServerLevel level, ItemStack itemStack) {
+        if (SoulmateEquipment.isSupportedItem(this, itemStack)) {
+            return this.inventories.equipment().equipOfferedItem(this, level, itemStack);
+        }
+        return super.equipItemIfPossible(level, itemStack);
+    }
+
+    @Override
+    protected void pickUpItem(ServerLevel level, ItemEntity itemEntity) {
+        if (itemEntity.getOwner() != this) {
+            super.pickUpItem(level, itemEntity);
+        }
+    }
+
+    @Override
+    protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
+        super.dropCustomDeathLoot(level, damageSource, recentlyHit);
+        this.inventories.equipment().dropStoredWeapons(this, level);
+    }
+
+    public boolean isHoldingMeleeWeapon() {
+        return SoulmateEquipment.getWeaponType(this.getMainHandItem()) == SoulmateEquipment.WeaponType.MELEE;
     }
 
     @Override
