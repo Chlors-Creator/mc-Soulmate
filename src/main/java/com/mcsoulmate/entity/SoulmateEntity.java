@@ -74,8 +74,11 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
             SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> IS_CHARGING_CROSSBOW =
             SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> IS_WEARING_WORK_HAT =
+            SynchedEntityData.defineId(SoulmateEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final SoulmateInventory inventories = new SoulmateInventory();
+    private WorkActivity workActivity = WorkActivity.NONE;
 
     public SoulmateEntity(EntityType<? extends SoulmateEntity> entityType, Level level) {
         super(entityType, level);
@@ -125,6 +128,7 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
         super.defineSynchedData(builder);
         builder.define(FISHING_HOOK_ID, NO_FISHING_HOOK);
         builder.define(IS_CHARGING_CROSSBOW, false);
+        builder.define(IS_WEARING_WORK_HAT, false);
     }
 
     @Override
@@ -170,6 +174,24 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
         return !this.isDeadOrDying() && !this.inventories.equipment().isInCombatMode(this) && !this.isPassenger();
     }
 
+    public boolean isWearingWorkHat() {
+        return this.entityData.get(IS_WEARING_WORK_HAT);
+    }
+
+    public void setWearingWorkHat(boolean wearing) {
+        this.entityData.set(IS_WEARING_WORK_HAT, wearing);
+    }
+
+    public void setWorkActivity(WorkActivity activity) {
+        this.workActivity = activity;
+    }
+
+    public void clearWorkActivity(WorkActivity activity) {
+        if (this.workActivity == activity) {
+            this.workActivity = WorkActivity.NONE;
+        }
+    }
+
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
         super.addAdditionalSaveData(output);
@@ -186,6 +208,7 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
     public void tick() {
         super.tick();
         this.inventories.equipment().updateActiveWeapon(this);
+        this.inventories.workwear().update(this, this.workActivity != WorkActivity.NONE);
     }
 
     @Override
@@ -297,5 +320,11 @@ public final class SoulmateEntity extends TamableAnimal implements CrossbowAttac
     @Override
     public void performRangedAttack(LivingEntity target, float pullProgress) {
         SoulmateCombatGoals.performRangedAttack(this, target, pullProgress);
+    }
+
+    public enum WorkActivity {
+        NONE,
+        FARMING,
+        FISHING
     }
 }

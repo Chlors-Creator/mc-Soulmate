@@ -13,6 +13,7 @@ public final class SoulmateInventory {
     private final FarmInventory farming = new FarmInventory();
     private final FarmInventory fishing = new FarmInventory();
     private final SoulmateEquipment equipment = new SoulmateEquipment();
+    private final SoulmateWorkwear workwear = new SoulmateWorkwear();
 
     public FarmInventory farming() {
         return this.farming;
@@ -24,6 +25,10 @@ public final class SoulmateInventory {
 
     public SoulmateEquipment equipment() {
         return this.equipment;
+    }
+
+    public SoulmateWorkwear workwear() {
+        return this.workwear;
     }
 
     public boolean hasFishingStorageBatchReady() {

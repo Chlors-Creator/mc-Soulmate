@@ -17,6 +17,7 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.entity.player.PlayerSkin;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, AvatarRenderState, PlayerModel> {
@@ -31,6 +32,7 @@ public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, 
         this.addLayer(new HumanoidArmorLayer<>(this, armorModels, context.getEquipmentRenderer()));
         this.addLayer(new ItemInHandLayer<>(this));
         this.addLayer(new FishingLineLayer(this));
+        this.addLayer(new WorkHatLayer(this, context.bakeLayer(WorkHatLayer.LAYER_LOCATION)));
     }
 
     @Override
@@ -55,6 +57,10 @@ public final class SoulmateRenderer extends HumanoidMobRenderer<SoulmateEntity, 
         state.showLeftSleeve = true;
         state.showRightSleeve = true;
         state.setRenderData(FishingLineLayer.HOOK_POSITION, findFishingHookPosition(entity, partialTick));
+        state.setRenderData(WorkHatLayer.WEARING_HAT, entity.isWearingWorkHat());
+        if (entity.isWearingWorkHat()) {
+            state.headEquipment = ItemStack.EMPTY;
+        }
         setFishingArmPose(entity, state);
     }
 

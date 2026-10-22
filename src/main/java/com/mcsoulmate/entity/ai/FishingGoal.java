@@ -71,6 +71,7 @@ public final class FishingGoal extends Goal {
         }
         GameProfile profile = new GameProfile(this.soulmate.getUUID(), FAKE_PLAYER_NAME);
         this.fakePlayer = FakePlayerFactory.get(level, profile);
+        this.soulmate.setWorkActivity(SoulmateEntity.WorkActivity.FISHING);
         this.navigateToShore();
     }
 
@@ -92,6 +93,7 @@ public final class FishingGoal extends Goal {
     @Override
     public void stop() {
         this.soulmate.getNavigation().stop();
+        this.soulmate.clearWorkActivity(SoulmateEntity.WorkActivity.FISHING);
         this.discardFishingHook();
         this.fakePlayer = null;
         this.fishingSpot = null;

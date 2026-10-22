@@ -44,6 +44,10 @@ After signing a contract, right-click the Soulmate with a crop seed (or a planta
 
 If a regular or trapped chest with room is within 20 blocks, the Soulmate walks to it and deposits the farming inventory. It merges matching item stacks already in the chest first, then fills available slots in order. If no chest has room, it keeps the harvest in its saved inventory.
 
+## Work hat
+
+While the Soulmate is fishing, harvesting, or planting crops, it automatically wears a straw hat rendered by the mod (`mcsoulmate:textures/entity/straw_hat.png`). A helmet in its `armor.head` slot keeps its armor value and enchantments but is hidden from rendering while the hat is on. Each hat toggle has a 1-second cooldown, so quick task changes do not cause flickering.
+
 ## API configuration
 
 Open the Minecraft **Options** screen from the title menu or pause menu and select **API Configuration**. The screen stores the provider name, API URL, API key, and model in the client file `config/mcsoulmate-api.properties`. The API key is masked in the screen. This entry currently saves local connection settings; the mod does not yet send API requests.

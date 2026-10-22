@@ -13,6 +13,11 @@ public final class SoulmateClientEvents {
     }
 
     @SubscribeEvent
+    public static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(WorkHatLayer.LAYER_LOCATION, WorkHatLayer::createLayerDefinition);
+    }
+
+    @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntityTypes.SOULMATE.get(), SoulmateRenderer::new);
     }

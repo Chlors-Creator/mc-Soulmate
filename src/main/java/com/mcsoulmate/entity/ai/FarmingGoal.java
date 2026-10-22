@@ -52,6 +52,7 @@ public final class FarmingGoal extends Goal {
     @Override
     public void start() {
         if (this.workPosition != null) {
+            this.soulmate.setWorkActivity(this.workActivity());
             this.navigateToWorkPosition();
         }
     }
@@ -73,7 +74,18 @@ public final class FarmingGoal extends Goal {
     @Override
     public void stop() {
         this.soulmate.getNavigation().stop();
+        this.soulmate.clearWorkActivity(SoulmateEntity.WorkActivity.FARMING);
         this.clearWorkPosition();
+    }
+
+    private SoulmateEntity.WorkActivity workActivity() {
+        if (this.workType == null) {
+            return SoulmateEntity.WorkActivity.NONE;
+        }
+        return switch (this.workType) {
+            case HARVEST, PLANT -> SoulmateEntity.WorkActivity.FARMING;
+            case DEPOSIT, DEPOSIT_FISH -> SoulmateEntity.WorkActivity.NONE;
+        };
     }
 
     private boolean selectWork(ServerLevel level) {

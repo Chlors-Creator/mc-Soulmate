@@ -29,6 +29,7 @@
 | 箱子存储 | 20 格内有可用普通箱子或陷阱箱时前往存放；优先合并同类堆叠，再使用空槽 |
 | 钓鱼 | 安全且主手持钓鱼竿时，前往附近水岸、抛竿、等待咬钩并收线；鱼获进入独立存档库存，累计 10 件鱼类物品后暂停钓鱼并前往箱子存放 |
 | API 配置入口 | 在 Minecraft「选项」界面添加 API 配置按钮；编辑的服务商、地址、密钥与模型保存在客户端配置文件 |
+| 工作草帽 | 钓鱼、收获或种植作物时自动戴上草帽；头盔仍留在装备槽内（护甲值与附魔继续生效），仅在渲染状态中隐藏其外观；每次切换冷却 1 秒，冷却期内不改变戴帽状态 |
 | 移动 | 签约后跟随主人；移动速度属性初值为 0.13，需在游戏内测量并校准寻路速度 |
 
 这些目标、武器和速度数值是初版默认值，后续可以根据玩法调整。
@@ -42,6 +43,9 @@ src/main/java/com/mcsoulmate/
   entity/ModItems.java               # Soulmate 生物蛋注册
   entity/SoulmateEntity.java         # 契约、主人关系、目标选择、移动和攻击行为
   entity/FarmInventory.java          # 可保存的农作物、种子和钓获物品库存
+  entity/SoulmateEquipment.java      # 三类武器的存放槽与自动换装
+  entity/SoulmateEquipmentQuality.java # 装备品质比较
+  entity/SoulmateWorkwear.java       # 工作草帽的戴帽状态与切换冷却
   entity/ai/FarmingGoal.java         # 安全状态下的耕作与箱子存放调度
   entity/ai/FishingGoal.java         # 使用原版钓竿行为、咬钩后收线并整理鱼获
   entity/ai/FishingSpotSearch.java   # 搜索可站立的水岸钓鱼位置
@@ -54,11 +58,12 @@ src/main/java/com/mcsoulmate/
   client/ApiConfigurationStore.java # 客户端本地 API 配置读写
   client/SoulmateRenderer.java       # 玩家模型、皮肤和装备层
   client/FishingLineLayer.java       # 根据同步鱼钩位置绘制鱼线
+  client/WorkHatLayer.java           # 工作草帽模型、贴图与渲染层
 src/main/resources/
   META-INF/accesstransformer.cfg       # 读取原版钓鱼钩的咬钩同步状态
   assets/mcsoulmate/lang/            # 中文与英文名称
   assets/mcsoulmate/items/           # 生物蛋物品模型定义
-  assets/mcsoulmate/textures/entity/ # 固定皮肤
+  assets/mcsoulmate/textures/entity/ # 固定皮肤与工作草帽贴图
   data/mcsoulmate/advancement/       # 契约成就
 src/main/templates/META-INF/
   neoforge.mods.toml                 # NeoForge Mod 元数据模板
